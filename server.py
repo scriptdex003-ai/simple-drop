@@ -84,6 +84,11 @@ def download_file(filename):
 def serve_static(filename):
     return send_from_directory(STATIC_FOLDER, filename)
 
+@app.route("/ping")
+def ping():
+    """Simple health check for keep-alive services"""
+    return "PONG", 200
+
 # The local __main__ block is ignored by Render/Gunicorn
 if __name__ == "__main__":
     print(f"SimpleDrop LIVE locally at: http://{get_auto_ip()}:5000")
