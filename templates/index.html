@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleDrop | Secure File Transfer</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        /* LOGIN OVERLAY */
+        #loginOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(99, 102, 241, 0.98);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease;
+        }
+
+        .login-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            text-align: center;
+            width: 90%;
+            max-width: 350px;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 12px;
+            margin: 20px 0;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-sizing: border-box;
+        }
+
+        /* HEADER */
+        .top-header {
+            height: 70px;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            padding: 0 25px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .top-header-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-grow: 1;
+        }
+
+        .top-header-logo img { width: 40px; height: 40px; }
+        .top-header-logo h1 { font-size: 22px; font-weight: 800; margin: 0; }
+
+        .change-name-btn {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* MAIN AREA */
+        .main {
+            min-height: calc(100vh - 70px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 30px 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 420px;
+            padding: 2rem;
+            border-radius: 22px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border);
+            padding: 2rem;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: .2s;
+            margin-bottom: 1rem;
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary);
+            background: #f5f7ff;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        .btn-primary:hover { background: var(--primary-hover); }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f1f5f9;
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-top: 8px;
+            font-size: .85rem;
+        }
+
+        .send-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .qr-section img {
+            width: 140px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 5px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div id="loginOverlay">
+    <div class="login-box">
+        <h2>SimpleDrop</h2>
+        <p style="color: var(--text-sub);">Enter your name to start sharing.</p>
+        <input type="text" id="usernameInput" placeholder="e.g. My iPhone" autocomplete="off">
+        <button class="btn-primary" onclick="joinServer()">Join Server</button>
+    </div>
+</div>
+
+<header class="top-header">
+    <div class="top-header-logo">
+        <img src="/static/logo.png" alt="Logo">
+        <h1>SimpleDrop</h1>
+    </div>
+    <button class="change-name-btn" onclick="changeName()">Change Name 👤</button>
+</header>
+
+<main class="main">
+    <div class="card">
+        <div class="upload-area" id="dropArea">
+            <div style="font-size: 2rem; margin-bottom: 10px;">📁</div>
+            <p id="dropText">Drag & Drop file here or <strong>browse</strong></p>
+            <p id="fileNameDisplay" style="color:var(--primary); font-weight:bold;"></p>
+            <input type="file" id="fileInput" hidden>
+        </div>
+
+        <div class="files">
+            <h3 style="text-align: left; font-size: 1rem; margin-bottom: 10px;">Active Devices</h3>
+            <div id="user-list">
+                <p style="color: var(--text-sub); font-size: 0.8rem;">Waiting for others to join...</p>
+            </div>
+        </div>
+
+        <div style="margin: 2rem 0; border-top: 1px solid var(--border); position: relative;">
+            <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fff; padding: 0 10px; font-size: 0.7rem; color: var(--text-sub);">CONNECT PHONE</span>
+        </div>
+
+        <div class="qr-section">
+            <img src="/static/qr.png" alt="QR Code">
+            <div style="margin-top: 10px; font-size: 0.9rem;">
+                Connected: <span id="devices" style="color: var(--primary);">0</span>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+    const socket = io();
+    let selectedFile = null;
+
+    // --- 1. PERSISTENCE & LOGIN ---
+    window.onload = () => {
+        const savedName = localStorage.getItem("sd_name");
+        if (savedName) {
+            document.getElementById("usernameInput").value = savedName;
+            joinServer(true);
+        }
+    };
+
+    function joinServer(isAuto = false) {
+        const nameInput = document.getElementById("usernameInput");
+        const name = nameInput.value.trim();
+        if (!name) return alert("Please enter a name.");
+
+        localStorage.setItem("sd_name", name);
+        socket.emit("set_username", { username: name });
+
+        const overlay = document.getElementById("loginOverlay");
+        if (isAuto) {
+            overlay.style.display = "none";
+        } else {
+            overlay.style.opacity = "0";
+            setTimeout(() => overlay.style.display = "none", 300);
+        }
+    }
+
+    function changeName() {
+        localStorage.removeItem("sd_name");
+        location.reload();
+    }
+
+    // --- 2. FILE HANDLING ---
+    const dropArea = document.getElementById("dropArea");
+    const fileInput = document.getElementById("fileInput");
+    const fileNameDisplay = document.getElementById("fileNameDisplay");
+    const dropText = document.getElementById("dropText");
+
+    dropArea.onclick = () => fileInput.click();
+    fileInput.onchange = (e) => handleFiles(e.target.files[0]);
+
+    ["dragover"].forEach(e => dropArea.addEventListener(e, (ev) => {
+        ev.preventDefault();
+        dropArea.classList.add("dragover");
+    }));
+    ["dragleave", "drop"].forEach(e => dropArea.addEventListener(e, (ev) => {
+        ev.preventDefault();
+        dropArea.classList.remove("dragover");
+    }));
+
+    dropArea.addEventListener("drop", (e) => {
+        if (e.dataTransfer.files.length > 0) handleFiles(e.dataTransfer.files[0]);
+    });
+
+    function handleFiles(file) {
+        selectedFile = file;
+        fileNameDisplay.innerText = "📁 Selected: " + file.name;
+        dropText.style.display = "none";
+    }
+
+    // --- 3. DEVICE LIST & SENDING ---
+    socket.on("update_user_list", (users) => {
+        const container = document.getElementById("user-list");
+        const others = users.filter(u => u.sid !== socket.id);
+        document.getElementById("devices").innerText = others.length;
+
+        container.innerHTML = others.length ? "" : "<p style='font-size:0.8rem; color:var(--text-sub);'>No one else online...</p>";
+        
+        others.forEach(user => {
+            const div = document.createElement("div");
+            div.className = "file-item";
+            div.innerHTML = `
+                <span><strong>${user.name}</strong></span>
+                <button class="send-btn" onclick="sendToUser('${user.sid}')">Send File</button>
+            `;
+            container.appendChild(div);
+        });
+    });
+
+    function sendToUser(sid) {
+        if (!selectedFile) return alert("Please drop a file first!");
+        
+        const fd = new FormData();
+        fd.append('file', selectedFile);
+        fd.append('target_sid', sid);
+
+        fetch('/upload', { method: 'POST', body: fd }).then(res => {
+            if (res.ok) {
+                alert("Sent successfully! 🚀");
+                selectedFile = null;
+                fileNameDisplay.innerText = "";
+                dropText.style.display = "block";
+            }
+        });
+    }
+
+// --- 4. RECEIVING LOGIC (FIXED) ---
+socket.on("private_file_ready", (data) => {
+    console.log("Incoming file signal received:", data);
+    
+    // 1. Create a "Download" item in the device list
+    const container = document.getElementById("user-list");
+    const incomingDiv = document.createElement("div");
+    
+    incomingDiv.className = "file-item";
+    incomingDiv.style.background = "#dcfce7"; // Light green background
+    incomingDiv.style.border = "2px solid #22c55e";
+    
+    incomingDiv.innerHTML = `
+        <span><strong>📩 New File:</strong> ${data.display_name}</span>
+        <a href="/download/${data.filename}" 
+           style="background:#22c55e; color:white; padding:6px 12px; border-radius:6px; text-decoration:none; font-size:0.8rem; font-weight:bold;">
+           Download
+        </a>
+    `;
+    
+    // Put it at the very top of the list
+    container.prepend(incomingDiv);
+
+    // 2. Fallback Alert (in case they aren't looking at the screen)
+    alert("📩 You received a new file: " + data.display_name);
+});
+</script>
+</body>
+</html>
